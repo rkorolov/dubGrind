@@ -1,9 +1,14 @@
 import os
 from dotenv import load_dotenv
-import openai
+from openai import OpenAI
+import json
+
+
 
 # Load environment variables
 load_dotenv()
+
+
 
 # Get the OpenAI API key from the environment
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
@@ -11,8 +16,9 @@ OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY is not set. Please check your environment variables or .env file.")
 
+client = OpenAI(api_key=OPENAI_API_KEY)
+
 # Configure OpenAI API
-openai.api_key = OPENAI_API_KEY
 
 # Function to query OpenAI's GPT models
 # def chat_bot(prompt, model="gpt-4", temperature=0.7):
@@ -47,16 +53,17 @@ def generate_quiz(topic, num_questions, model="gpt-4", temperature=0.7):
             "'choices' (a list of four answer options) and 'correct' (the correct answer)."
         )
 
+        
         # Call the OpenAI API
-        response = openai.ChatCompletion.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=temperature,
-        )
+        response = client.chat.completions.create(model=model,
+        messages=[{"role": "user", "content": prompt}],
+        temperature=temperature)
 
         # Parse the response
-        content = response["choices"][0]["message"]["content"]
-        return content.strip()
+        content = response.choices[0].message.content 
+
+        return json.loads(content.strip()) #  changed from just returning content.strip() to this json function so it turns into a dictionary
+    
     except Exception as e:
         return f"Error: {e}"
 

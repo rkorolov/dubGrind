@@ -7,6 +7,8 @@ import os # for key usage
 from dotenv import load_dotenv # for key usage pt2
 from pdf_summarize import summarize_file # for summarizing pdfs
 from chatbotmodule import generate_quiz # for quiz generation
+from study_guide_generator import generate_study_guide # for study guide generation
+from discord import Embed
 
 
 from husky import get_user_husky, user_huskies
@@ -24,6 +26,9 @@ if not os.path.exists('uploads'):
 
 @bot.command()
 async def summarize(ctx):
+    '''
+    Summarizes a given PDF file.
+    '''
     await ctx.send("📎 Please upload a PDF file within 30 seconds.")
 
     try:
@@ -41,6 +46,8 @@ async def summarize(ctx):
             await attachment.save(file_path)
 
             await ctx.send(f"✅ PDF `{attachment.filename}` has been uploaded successfully!")
+            
+            await ctx.send(f"🌀 Generating summary ...")
 
             # Summarize the PDF file
             summary = summarize_file(file_path)
@@ -54,6 +61,7 @@ async def summarize(ctx):
         await ctx.send("⏰ You took too long to upload the file. Please try again.")
 
 # AI Question Generation
+
 async def generate_ai_questions(num_questions):
     questions = {}
     for i in range(1, num_questions + 1):
@@ -96,8 +104,9 @@ async def generate_ai_questions(num_questions):
 
     return questions
 
+
 # Command to run an AI-powered quiz
-@bot.command()
+# @bot.command() --> new version with backend is below
 async def ai_quiz(ctx, num_questions: int):
     if num_questions <= 0 or num_questions > 50:
         await ctx.send("Please choose a number between 1 and 50.")
@@ -139,6 +148,159 @@ async def ai_quiz(ctx, num_questions: int):
         await ctx.send(f"AI Quiz finished! You scored {score}/{num_questions}.")
     except Exception as e:
         await ctx.send(f"An error occurred while generating the quiz: {e}")
+
+#linked backend pt1 -- WORKS !! :D #justachillguy
+@bot.command()
+async def gen_question(ctx):
+    '''
+    Generates a quiz based on a given topic and number of questions.
+    '''
+    quiz_content = await gen_question_helper(ctx)
+    
+    if not quiz_content:
+        await ctx.send("Failed to generate quiz. Please try again later.")
+        return
+    
+    score = 0
+    total_questions = len(quiz_content)
+
+    def check(m):
+        return m.author == ctx.author and m.channel == ctx.channel and m.content.upper() in ['A', 'B', 'C', 'D']
+
+    await ctx.send(f"🐋 **Quiz generated!** You have 20 seconds to answer each question. Type `A`, `B`, `C`, or `D` to respond.\n")
+
+
+    for question, data in quiz_content.items():
+        choices = data["choices"]
+        correct_answer = data["correct"]
+
+        # Format the question with choices (A, B, C, D)
+        formatted_choices = "\n".join([f"{chr(65+i)}. {choice}" for i, choice in enumerate(choices)])
+        await ctx.send(f"**{question}**\n{formatted_choices}")
+
+        try:
+            # Wait for the user's response
+            msg = await bot.wait_for('message', timeout=20.0, check=check)
+            user_answer = msg.content.upper()
+            selected_choice = choices[ord(user_answer) - 65]  # Map A/B/C/D to choices list
+
+            # Check if the answer is correct
+            if selected_choice == correct_answer:
+                await ctx.send("✅ Correct!\n")
+                score += 1
+            else:
+                await ctx.send(f"❌ Incorrect! The correct answer was **{correct_answer}**.\n")
+
+        except asyncio.TimeoutError:
+            await ctx.send(f"⏰ Time's up! The correct answer was **{correct_answer}**.\n")
+
+    # Final score
+    await ctx.send(f"🎉 **Quiz Complete!** You scored **{score}/{total_questions}**!")
+
+#linked backend pt2
+async def gen_question_helper(ctx):
+    await ctx.send("📝 How many questions would you like in the quiz? (e.g., 5)")
+
+    def check_author(m):
+        return m.author == ctx.author and m.channel == ctx.channel
+    
+    try:
+        # Wait for the number of questions
+        msg_num = await bot.wait_for('message', timeout=30.0, check=check_author)
+        num_questions = int(msg_num.content)
+
+        await ctx.send("🔍 What topic should the quiz be about?")
+
+        # Wait for the topic
+        msg_topic = await bot.wait_for('message', timeout=30.0, check=check_author)
+        topic = msg_topic.content
+
+        await ctx.send("Generating quiz ...")
+
+        # Generate the quiz
+        quiz_content = generate_quiz(topic, num_questions)
+
+        # Send the quiz back to the user
+        print(quiz_content)
+        await ctx.send("Generated!")
+        return quiz_content
+
+    except asyncio.TimeoutError:
+        await ctx.send("⏰ You took too long to respond. Please try again.")
+    except ValueError:
+        await ctx.send("⚠️ Please enter a valid number for the number of questions.")
+
+def chunk_maker(text, limit=1024):
+    """Splits text into chunks without cutting words."""
+    chunks = []
+    while len(text) > limit:
+        # Find the last newline or period before the limit
+        split_index = text.rfind("\n", 0, limit)
+        if split_index == -1:
+            split_index = text.rfind(".", 0, limit) + 1
+        if split_index <= 0:
+            split_index = limit  # Hard split if no good breakpoint
+
+        chunks.append(text[:split_index].strip())
+        text = text[split_index:].strip()
+
+    chunks.append(text.strip())
+    return chunks
+
+async def study_guide_embed(ctx, study_guide):
+    embed = Embed(title="📚 Study Guide", color=int('848ECB', 16))
+
+    sections = study_guide.strip().split("---")  # Assuming "---" separates sections
+
+
+    for idx, section in enumerate(sections, start=1):
+        chunks = chunk_maker(section)
+
+        for part_idx, chunk in enumerate(chunks):
+            # title = f"Section {idx}" if part_idx == 0 else f"Section {idx} (cont.)"
+            # embed.add_field(name=title, value=chunk, inline=False)
+                
+            embed.add_field(name="", value=chunk, inline=False)
+
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def gen_study_guide(ctx):
+    '''
+    Generates a study guide based on a given PDF file.
+    '''
+    await ctx.send("📎 Please upload a PDF file within 30 seconds.")
+
+    try:
+        # Wait for the user's message with an attachment
+        message = await bot.wait_for(
+            "message",
+            timeout=30,  # Timeout in seconds
+            check=lambda m: m.author == ctx.author and m.attachments
+        )
+
+        # Check if the attachment is a PDF
+        attachment = message.attachments[0]
+        if attachment.filename.endswith('.pdf'):
+            file_path = os.path.join('uploads', attachment.filename)
+            await attachment.save(file_path)
+
+            await ctx.send(f"✅ PDF `{attachment.filename}` has been uploaded successfully!")
+
+            await ctx.send(f"🌀 Generating study guide ...")
+
+            # Generate the study guide
+
+            study_guide = generate_study_guide(file_path)
+
+            await study_guide_embed(ctx, study_guide) # split into sections to avoid character limit + yay formatting
+            
+        else:
+            await ctx.send("⚠️ Please upload a valid PDF file.")
+
+    except asyncio.TimeoutError:
+        await ctx.send("⏰ You took too long to upload the file. Please try again.")
+
 
 # Pomodoro Timer Command
 @bot.command()

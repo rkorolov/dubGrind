@@ -32,7 +32,7 @@ def generate_study_guide(file_path):
 
     # Define prompt
     prompt = ChatPromptTemplate.from_messages(
-        [("system", "Write an in-depth study guide for the following. For each section in the study guide, include a practice question:\n\n{context}")]
+        [("system", "Write an in-depth study guide for the following. For each section in the study guide, include a practice question. Format using Discord Embed Markdown -- do not include ```markdown:\n\n{context}")]
     )
 
     # Create chain
@@ -42,3 +42,8 @@ def generate_study_guide(file_path):
     result = chain.invoke({"context": docs})
 
     return result
+
+if __name__ == "__main__":
+    file_path = "week4.pdf"
+    summary = generate_study_guide(file_path)
+    print(summary)
