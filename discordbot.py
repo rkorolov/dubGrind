@@ -5,6 +5,7 @@ import asyncio
 import openai  # Import OpenAI for API usage
 import os # for key usage
 from dotenv import load_dotenv # for key usage pt2
+from pdf_summarize import summarize_file # for summarizing pdfs
 
 
 from husky import get_user_husky, user_huskies
@@ -16,8 +17,40 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="~", intents=intents)
 
-# OpenAI API Setup
-#openai.api_key = "YOUR_OPENAI_API_KEY"  # Replace with your OpenAI API key
+#file uploads
+if not os.path.exists('uploads'):
+    os.makedirs('uploads')
+
+@bot.command()
+async def summarize(ctx):
+    await ctx.send("📎 Please upload a PDF file within 30 seconds.")
+
+    try:
+        # Wait for the user's message with an attachment
+        message = await bot.wait_for(
+            "message",
+            timeout=30,  # Timeout in seconds
+            check=lambda m: m.author == ctx.author and m.attachments
+        )
+
+        # Check if the attachment is a PDF
+        attachment = message.attachments[0]
+        if attachment.filename.endswith('.pdf'):
+            file_path = os.path.join('uploads', attachment.filename)
+            await attachment.save(file_path)
+
+            await ctx.send(f"✅ PDF `{attachment.filename}` has been uploaded successfully!")
+
+            # Summarize the PDF file
+            summary = summarize_file(file_path)
+
+            await ctx.send(summary.strip())
+            
+        else:
+            await ctx.send("⚠️ Please upload a valid PDF file.")
+
+    except asyncio.TimeoutError:
+        await ctx.send("⏰ You took too long to upload the file. Please try again.")
 
 # AI Question Generation
 async def generate_ai_questions(num_questions):

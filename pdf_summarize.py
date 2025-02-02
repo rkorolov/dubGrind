@@ -32,7 +32,7 @@ def summarize_file(file_path):
 
     # Define prompt
     prompt = ChatPromptTemplate.from_messages(
-        [("system", "Write a concise summary and an overarching takeaways section at the end of the following, such as topics to focus on. (do not include next steps):\n\n{context}")]
+        [("system", "Write a concise summary and an overarching takeaways section at the end of the following, such as topics to focus on. (do not include next steps). Format using Discord markdown language:\n\n{context}")]
     )
 
     # Create chain
