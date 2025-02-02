@@ -1,3 +1,16 @@
 .env
 /uploads
 /venv
+
+# @bot.command()
+# async def change_avatar(ctx):
+#     if ctx.author.guild_permissions.administrator:  # Optional: Admin-only command
+#         try:
+#             with open('avatar.png', 'rb') as image:
+#                 await bot.user.edit(avatar=image.read())
+#             await ctx.send("✅ Bot avatar updated successfully!")
+#         except Exception as e:
+#             await ctx.send(f"❌ Failed to update avatar: {e}")
+#     else:
+#         await ctx.send("🚫 You don't have permission to change the bot's avatar.")
+

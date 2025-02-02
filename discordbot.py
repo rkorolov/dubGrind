@@ -18,13 +18,20 @@ intents = discord.Intents.default()
 intents.messages = True
 intents.message_content = True
 
-bot = commands.Bot(command_prefix="~", intents=intents)
+bot = commands.Bot(command_prefix="~", intents=intents, help_command=None)
 
 #file uploads
 if not os.path.exists('uploads'):
     os.makedirs('uploads')
 
-@bot.command()
+#TODO: Section commands by category
+    
+
+#GENERATORS
+    
+
+# @bot.command()
+@commands.command()
 async def summarize(ctx):
     '''
     Summarizes a given PDF file.
@@ -150,7 +157,8 @@ async def ai_quiz(ctx, num_questions: int):
         await ctx.send(f"An error occurred while generating the quiz: {e}")
 
 #linked backend pt1 -- WORKS !! :D #justachillguy
-@bot.command()
+# @bot.command()
+@commands.command()
 async def gen_question(ctx):
     '''
     Generates a quiz based on a given topic and number of questions.
@@ -264,7 +272,8 @@ async def study_guide_embed(ctx, study_guide):
 
     await ctx.send(embed=embed)
 
-@bot.command()
+# @bot.command()
+@commands.command()
 async def gen_study_guide(ctx):
     '''
     Generates a study guide based on a given PDF file.
@@ -321,6 +330,32 @@ async def ptimer(ctx, work_time: int = 25, break_time: int = 5):
     except Exception as e:
         await ctx.send("An error occurred with the Pomodoro timer.")
         print(f"Error: {e}")
+
+#manual add
+bot.add_command(summarize)
+bot.add_command(gen_study_guide)
+bot.add_command(gen_question)
+
+class CustomHelpCommand(commands.HelpCommand):
+    async def send_bot_help(self, mapping):
+        embed = discord.Embed(title="📚 Bot Commands", color=0x848ECB)
+
+        # Custom Categories
+        categories = {
+            "🛠️ Generating Commands": [summarize, gen_study_guide, gen_question],
+            "Study Commands": [ptimer],
+            
+        }
+
+        # Add commands to the embed
+        for category, commands_list in categories.items():
+            command_names = "\n".join(f"`{cmd.name}` - {cmd.help}" for cmd in commands_list)
+            embed.add_field(name=category, value=command_names, inline=False)
+
+        await self.get_destination().send(embed=embed)
+
+# Apply the Custom Help Command
+bot.help_command = CustomHelpCommand()
 
 # Daily reset and stat decay
 @tasks.loop(hours=24)
