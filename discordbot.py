@@ -6,6 +6,7 @@ import openai  # Import OpenAI for API usage
 import os # for key usage
 from dotenv import load_dotenv # for key usage pt2
 from pdf_summarize import summarize_file # for summarizing pdfs
+from chatbotmodule import generate_quiz # for quiz generation
 
 
 from husky import get_user_husky, user_huskies
