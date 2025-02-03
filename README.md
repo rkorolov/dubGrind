@@ -12,7 +12,7 @@ An AI agent-integrated discord bot that maximizes the 'grind'
 ## 🛠️ Tech Stack
 
 - **Frontend:** Discord API
-- **Backend:** Langchain, OpenAI
+- **Backend:** Langchain, OpenAI API
 
 ## 🚀 Getting Started
 
